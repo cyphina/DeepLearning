@@ -1,5 +1,6 @@
 Linux
-python KTF_dual_input_g1.py --good_path "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" --mal_path "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"  --mode final --epochs 1 --tr 20 --batch_size 20000 --model dual_large --save True > log1.txt 2>&1 &
+python KTF_dual_input_g1.py -m "final" --good_path "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" --mal_path "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"  --mode final --epochs 1 --tr 20 --batch_size 20000 --model dual_large --save True > log1.txt 2>&1 &
 
 Windows
-python KTF_dual_input_g1.py --good_path "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" --mal_path "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"  --mode final --epochs 1 --tr 20 --batch_size 20000 --model dual_large --save True > log1.txt 2
+python KTF_dual_input_g1.py -gp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" -mp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"  -md final --epochs 1 --tr 20 --batch_size 20000 --model dual_large --save True > log1.txt 2
+
