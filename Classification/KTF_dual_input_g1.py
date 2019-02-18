@@ -449,6 +449,7 @@ def mixLabels(y_train, perc, seed):
     mixSize = len(y_train) * perc
     #Ensure fair chance to pick any label by mixing all of the possible indices, but also ensure no duplicates
     mixIndices = np.arange(y_train.shape[0]) 
+    print(y_train.shape[0])
     np.random.shuffle(mixIndices)
     for i in np.arange(mixSize):
         y_train[mixIndices[i]] = 0 if y_train[i] else 1
