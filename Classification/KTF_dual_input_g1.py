@@ -19,6 +19,8 @@ from keras.models import Sequential
 from keras.constraints import maxnorm
 from keras.optimizers import Nadam
 
+from __future__ import print_function
+
 import json
 
 # _g for grant
@@ -31,7 +33,6 @@ def main():
     perm_width = len(perm_inputs[0])
     feat_width = len(feat_inputs[0])
     comb_width = len(comb_inputs[0])
-
 
     if args["mode"] == "final":
         print "final test all models and training ratios"
@@ -177,7 +178,7 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
         for r in args["train_ratio"]:
             percent=float(r)/100
             #stratified shuffle split used for cross validation
-            sss = StratifiedShuffleSplit(n_splits=5, random_state=0, test_size=1-percent)
+            sss = StratifiedShuffleSplit(n_splits=1, random_state=0, test_size=1-percent)
             cm = np.zeros([2,2], dtype=np.int64)
             train_time = 0.0
             test_time = 0.0
@@ -187,6 +188,9 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 feat_train, feat_test = feat_inputs[train_index], feat_inputs[test_index]
                 comb_train, comb_test = comb_inputs[train_index], comb_inputs[test_index]
                 labels_train, labels_test = labels[train_index], labels[test_index]
+
+                #Purposely set some labels to give the wrong values
+                mixLabels(labels_train, 10, 42)
 
                 if m == "oneLayer_comb":
                     print 'oneLayer_comb'
@@ -438,6 +442,13 @@ def calc_recall(cm):
 
 def calc_f1(precision, recall):
     return 2*((precision*recall)/(precision+recall))
+
+def mixLabels(y_train, perc, seed):
+    np.random.seed(seed)
+    mixSize = len(y_train) * perc
+    mixIndices = np.random.randint(m, size=mixSize)
+    for i in mixIndices:
+        y_train[i] = 0 if y_train[i] else 1
 
 
 def parse_arguments():
