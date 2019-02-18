@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 import argparse
 import sys
+import os
 
 from functools import partial
 from nltk.tokenize.regexp import regexp_tokenize
@@ -418,7 +419,7 @@ def save_results(data, modelName, model, save):
     file1.close()
 
     if save==True:
-        model.save('/home/grant309/DeepLearning/Models/'+ modelName + month + day + year + '-' + hour + min + '.h5')
+        model.save(os.path.join(os.getcwd(), modelName + month + day + year + '-' + hour + min + '.h5')
 
     return 0
 
