@@ -35,7 +35,7 @@ def main():
     comb_width = len(comb_inputs[0])
 
     if args["mode"] == "final":
-        print "final test all models and training ratios"
+        print("final test all models and training ratios")
         final_test(args, perm_inputs, feat_inputs, comb_inputs, labels)
     else:
         grid_search(args, perm_inputs, feat_inputs, comb_inputs, labels)
@@ -160,9 +160,9 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
     perm_width = int(len(perm_inputs[0]))
     feat_width = int(len(feat_inputs[0]))
     comb_width = int(len(comb_inputs[0]))
-    print 'perm width: ' + str(perm_width)
-    print 'feat width: ' + str(feat_width)
-    print 'comb width: ' + str(comb_width)
+    print ('perm width: ' + str(perm_width))
+    print ('feat width: ' + str(feat_width))
+    print ('comb width: ' + str(comb_width))
 
     input_ratios = args["input_ratio"]
     models = args["model"]
@@ -173,7 +173,7 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
     #models = ('oneLayer_comb', 'oneLayer_feat', 'oneLayer_perm', 'dual_simple', 'dual_large')
 
     for m in models:
-        print m
+        print(m)
         data = []
         for r in args["train_ratio"]:
             percent=float(r)/100
