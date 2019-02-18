@@ -442,11 +442,16 @@ def calc_f1(precision, recall):
     return 2*((precision*recall)/(precision+recall))
 
 def mixLabels(y_train, perc, seed):
+    '''
+    Pick random labels and switch their values
+    '''
     np.random.seed(seed)
     mixSize = len(y_train) * perc
-    mixIndices = np.random.randint(m, size=mixSize)
-    for i in mixIndices:
-        y_train[i] = 0 if y_train[i] else 1
+    #Ensure fair chance to pick any label by mixing all of the possible indices, but also ensure no duplicates
+    mixIndices = np.arange(y_train.shape[0]) 
+    np.random.shuffle(mixIndices)
+    for i in np.arange(mixSize):
+        y_train[mixIndices[i]] = 0 if y_train[i] else 1
 
 
 def parse_arguments():
