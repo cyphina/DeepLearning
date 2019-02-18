@@ -188,7 +188,7 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 labels_train, labels_test = labels[train_index], labels[test_index]
 
                 #Purposely set some labels to give the wrong values
-                mixLabels(labels_train, 10, 42)
+                mixLabels(labels_train, .10, 42)
 
                 if m == "oneLayer_comb":
                     print('oneLayer_comb')
@@ -449,7 +449,7 @@ def mixLabels(y_train, perc, seed):
     mixSize = len(y_train) * perc
     #Ensure fair chance to pick any label by mixing all of the possible indices, but also ensure no duplicates
     mixIndices = np.arange(y_train.shape[0]) 
-    print(y_train.shape[0])
+    print(y_train.shape[0], mixSize)
     np.random.shuffle(mixIndices)
     for i in np.arange(mixSize):
         y_train[mixIndices[i]] = 0 if y_train[i] else 1
