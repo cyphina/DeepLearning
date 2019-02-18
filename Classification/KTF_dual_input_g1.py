@@ -419,7 +419,7 @@ def save_results(data, modelName, model, save):
     file1.close()
 
     if save==True:
-        model.save(os.path.join(os.getcwd(), modelName + month + day + year + '-' + hour + min + '.h5')
+        model.save(os.path.join(os.getcwd(), modelName + month + day + year + '-' + hour + min + '.h5'))
 
     return 0
 
