@@ -5,6 +5,7 @@ import datetime
 import argparse
 import sys
 import os
+import errno
 
 from functools import partial
 from nltk.tokenize.regexp import regexp_tokenize
@@ -24,8 +25,12 @@ import json
 
 # _g for grant
 
+labelTrainSize = 0
+args = {}
+
 def main():
 
+    global args 
     args = parse_arguments()
 
     perm_inputs, feat_inputs, comb_inputs, labels = vectorize(args["good_path"], args["mal_path"])
@@ -35,7 +40,8 @@ def main():
 
     if args["mode"] == "final":
         print("final test all models and training ratios")
-        final_test(args, perm_inputs, feat_inputs, comb_inputs, labels)
+        for x in range(0,args["run_count"]):
+            final_test(args, perm_inputs, feat_inputs, comb_inputs, labels)
     else:
         grid_search(args, perm_inputs, feat_inputs, comb_inputs, labels)
 
@@ -47,14 +53,14 @@ def vectorize(good_path, mal_path):
     according to regular expressions below and creates matching labels.
     '''
 
-    with open(good_path) as f:
+    with open(good_path, encoding='utf-8') as f:
         ben_samples = f.readlines()
-    with open(mal_path) as f:
+    with open(mal_path, encoding='utf-8') as f:
         mal_samples = f.readlines()
 
-    print("Benign Size: ")
+    print("Benign Size (in bytes not number of samples): ")
     print(sys.getsizeof(ben_samples))
-    print("Malware Size: ")
+    print("Malware Size (in bytes not number of samples): ")
     print(sys.getsizeof(mal_samples))
 
     samples = ben_samples + mal_samples
@@ -133,21 +139,21 @@ def vectorize(good_path, mal_path):
     # ---- save library as json ---- 
 
 
-    print()
-    print("Comb Vect - Vocabulary: after fit xform")
-    print(comb_vect.vocabulary_)
-    print()
-    print("Comb Vect - Get Params:")
-    print(comb_vect.get_params())
-    print()
-    print("Comb Inputs Sparse:")
-    print(comb_inputs_sparse)
-    print()
-    print("Comb Inputs Dense:")
-    print(comb_inputs_dense)
-    print()
-    print("Comb Inputs (np array):")
-    print(comb_inputs)
+    # print()
+    # print("Comb Vect - Vocabulary: after fit xform")
+    # print(comb_vect.vocabulary_)
+    # print()
+    # print("Comb Vect - Get Params:")
+    # print(comb_vect.get_params())
+    # print()
+    # print("Comb Inputs Sparse:")
+    # print(comb_inputs_sparse)
+    # print()
+    # print("Comb Inputs Dense:")
+    # print(comb_inputs_dense)
+    # print()
+    # print("Comb Inputs (np array):")
+    # print(comb_inputs)
 
     return perm_inputs, feat_inputs, comb_inputs, labels
 
@@ -189,7 +195,9 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 labels_train, labels_test = labels[train_index], labels[test_index]
 
                 #Purposely set some labels to give the wrong values
-                mixLabels(labels_train, .10, 42)
+                global labelTrainSize 
+                labelTrainSize = len(labels_train)
+                mixLabels(labels_train, args["mix_size"], 42)
 
                 if m == "oneLayer_comb":
                     print('oneLayer_comb')
@@ -262,17 +270,19 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 test_time += time2-time1
                 labels_pred = (labels_pred > 0.5)
                 cm = cm + confusion_matrix(labels_test, labels_pred)
+
             acc = calc_accuracy(cm)
             prec = calc_precision(cm)
             rec = calc_recall(cm)
             f1 = calc_f1(prec, rec)
+
             avg_train_time = train_time/5
             avg_test_time = test_time/5
 
             data.append(dict(zip(["model_name", "neurons", "train_ratio", "input_ratio", \
             "epochs", "batch_size", "accuracy", "precision", "recall", "f1_score", \
-            "avg_train_time", "avg_test_time"], \
-            [m, size, r, ir, epoch, batch, acc, prec, rec, f1, avg_train_time, avg_test_time])))
+            "avg_train_time", "avg_test_time", "label_mix_per", "label_mix_count"], \
+            [m, size, r, ir, epoch, batch, acc, prec, rec, f1, avg_train_time, avg_test_time, args["mix_size"], labelTrainSize * args["mix_size"]])))
 
 
         print ('saving results for model: ' + str(m))
@@ -396,7 +406,7 @@ def grid_search(args, perm_inputs, feat_inputs, comb_inputs, labels):
                                 [m, size, r, ir, epoch, batch, acc, prec, rec, f1])))
 
 
-        print ('saving results for model: ' + str(m))
+        print ('Saving results for model: ' + str(m))
         save_results(data, m, model, False)
     return
 
@@ -409,19 +419,27 @@ def save_results(data, modelName, model, save):
     min = str('%02d' % d.minute)
 
     df = pd.DataFrame(data)
-    try:
-        path1 = '/home/grant309/DeepLearning/Results/deepResults/multi_input/fall18/' + modelName + month + day + year + '-' + hour + min + '.csv'
-        file1 = open(path1, "w+")
-    except:
-        path1 = "gridSearch" + modelName + ".csv"
-        file1 = open(path1, "w+")
-    df.to_csv(file1, index=False)
-    file1.close()
+
+    saveResPath = ""
+    #Handle being run from the classification folder or from the root project folder (as long as the other files are there too)
+    if os.path.split(os.getcwd())[-1] == "Classification":
+        saveResPath = os.path.join(os.getcwd().replace("Classification",""), "Results", "NamLabelMixups")
+    else:
+        saveResPath = os.path.join(os.getcwd(), "Results", "NamLabelMixups")
+        
+    #modelPath = os.path.join(saveResPath, "{} {}-{}-{} {}h{}m.csv".format(modelName,month,day,year,hour,min))
+    modelLabel = "mixP" + str(args["mix_size"]) + "-size" + str(labelTrainSize) + ".csv"
+    modelPath = os.path.join(saveResPath, modelLabel)
+    if not os.path.exists(os.path.dirname(saveResPath)):
+        os.makedirs(os.path.dirname(saveResPath), exist_ok=True)
+
+    newFile = not os.path.exists(os.path.dirname(modelPath))
+    with open(modelPath, "a+") as f:
+        #append to the csv file
+        df.to_csv(f, mode='a', header=newFile, index=False)  
 
     if save==True:
-        model.save(os.path.join(os.getcwd(), modelName + month + day + year + '-' + hour + min + '.h5'))
-
-    return 0
+        model.save(os.path.join(os.getcwd(), "{} {}-{}-{} {}-{}.h5".format(modelName,month,day,year,hour,min)))
 
 def calc_accuracy(cm):
     TP = float(cm[1][1])
@@ -446,7 +464,7 @@ def mixLabels(y_train, perc, seed):
     '''
     Pick random labels and switch their values
     '''
-    np.random.seed(seed)
+    np.random.seed()
     mixSize = int(len(y_train) * perc)
     #Ensure fair chance to pick any label by mixing all of the possible indices, but also ensure no duplicates
     mixIndices = np.arange(y_train.shape[0]) 
@@ -460,6 +478,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-gp", "--good_path", help="Good File Path")
     parser.add_argument("-mp", "--mal_path", help="Malware File Path")
+    parser.add_argument("-rc", "--run_count", help=r"Number of times to run")
+    parser.add_argument("-ms", "--mix_size", help=r"% of labels with values swapped (emulate data poisoning)")  
     parser.add_argument("-ad", "--adverse", help="Turns on Adversarial Learning")
     parser.add_argument("-md", "--mode", help="Choose mode: final, grid")
     parser.add_argument("-e", "--epochs", help="Number of Epochs, can be list for grid search", type=int, nargs="*")
@@ -499,6 +519,23 @@ def parse_arguments():
     else:
         print("Needs Malware Path with -mp or --mal_path")
         sys.exit()
+
+    if args.run_count:
+        arguments["run_count"] = int(args.run_count)
+    else:
+        arguments["run_count"] = 1
+
+    if args.mix_size:
+        args.mix_size = float(args.mix_size)
+        if args.mix_size > 1:
+            print("Mix size should be a value from 0-1, defaulting to default mix size of .1")
+            mix_size = .1
+        else:
+            mix_size = args.mix_size    
+    else:
+        print("Defaulting to mix_size 10%")
+        mix_size = .1
+    arguments["mix_size"] = mix_size
 
     if args.adverse:
         adverse = True
