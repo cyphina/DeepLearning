@@ -433,7 +433,7 @@ def save_results(data, modelName, model, save):
     if not os.path.exists(os.path.dirname(saveResPath)):
         os.makedirs(os.path.dirname(saveResPath), exist_ok=True)
 
-    newFile = not os.path.exists(os.path.dirname(modelPath))
+    newFile = not os.path.exists(modelPath)
     with open(modelPath, "a+") as f:
         #append to the csv file
         df.to_csv(f, mode='a', header=newFile, index=False)  
