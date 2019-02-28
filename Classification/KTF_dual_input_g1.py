@@ -32,7 +32,7 @@ def main():
 
     global args 
     args = parse_arguments()
-
+    
     perm_inputs, feat_inputs, comb_inputs, labels = vectorize(args["good_path"], args["mal_path"])
     perm_width = len(perm_inputs[0])
     feat_width = len(feat_inputs[0])
@@ -49,7 +49,8 @@ def main():
 
 def vectorize(good_path, mal_path):
     '''
-    accepts the filepath to the benign and malicious data files. Then tokenizes
+    Combines the data from a file holding the benign apps, and malicious applications
+    Generates labels for the data, and  
     according to regular expressions below and creates matching labels.
     '''
 
@@ -58,15 +59,10 @@ def vectorize(good_path, mal_path):
     with open(mal_path, encoding='utf-8') as f:
         mal_samples = f.readlines()
 
-    print("Benign Size (in bytes not number of samples): ")
-    print(sys.getsizeof(ben_samples))
-    print("Malware Size (in bytes not number of samples): ")
-    print(sys.getsizeof(mal_samples))
+    print("Benign bytesize: ", sys.getsizeof(ben_samples), "Count size: ", len(ben_samples))
+    print("Mal bytesize: ", sys.getsizeof(mal_samples), "Count size: ", len(mal_samples))
 
     samples = ben_samples + mal_samples
-
-    print("Samples:")
-    print("prints full sample set with apps enclosed by "" .")
 
     labels = np.array([])
     for x in ben_samples:
@@ -74,8 +70,7 @@ def vectorize(good_path, mal_path):
     for x in mal_samples:
         labels = np.append(labels, 1)
 
-    print("Samples Size: ")
-    print(sys.getsizeof(samples))
+    print("Sample Size (bytes):", sys.getsizeof(samples), "Sample Size (count):", len(samples))
 
     #regular expressions for each desired data type
     perm_pattern = "(?:\w|\.)+(?:permission).(?:\w|\.)+"
@@ -197,6 +192,7 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 #Purposely set some labels to give the wrong values
                 global labelTrainSize 
                 labelTrainSize = len(labels_train)
+                print(labelTrainSize, len(labels_test))
                 mixLabels(labels_train, args["mix_size"], 42)
 
                 if m == "oneLayer_comb":
