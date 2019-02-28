@@ -15,4 +15,5 @@ Windows custom mixValues:
 
 python KTF_dual_input_g1.py -gp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" -mp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt" -rc 1 -ms 0.5 -md final --epochs 1 --tr 80 --batch_size 20000 --model dual_large --save True > log1.txt 
 
-python KTF_dual_input_g1.py -gp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" -mp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt" -rc 5 -ms 0.5 -md final --epochs 1 --tr 80 --batch_size 20000 --model dual_large --save True > log1.txt 
+This file ignore mixSize:
+python KTF_dual_input_g1_python3_loop.py -gp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt" -mp "D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt" -rc 5 -ms 0.5 -md final --epochs 1 --tr 80 --batch_size 20000 --model dual_large --save True > log1.txt 

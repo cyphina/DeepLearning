@@ -36,17 +36,26 @@ for file in filesToAnalyze:
     result = pd.read_csv(os.path.join(saveResPath, file))
     desc = result.describe()
     resultDescriptions.append(desc)
-    meanAccuracy.append(desc.iloc[1,0])
     labelMixPer.append(result.iloc[0,8])
 
 result.columns, result.describe()
 
 #%%
 #Plot the accuracy
-plt.plot(labelMixPer, meanAccuracy, "g-")
-plt.title("Accuracy vs Percent Label Mixup (2000 instances)")
-plt.ylabel("Accuracy", fontsize=14, rotation=90)
-plt.xlabel("Perc of labels mixed up", fontsize=14)
-plt.axis([-0.02,1.02, 0, 1])
-save_fig('LabelMixupAccuracy400')
+rowSize = 3
+columnSize = 5
+yNames = resultDescriptions[0].columns
+totalGraphs = len(resultDescriptions[0].columns)
+plt.figure(figsize=(25,15))
+
+for r in range(totalGraphs):
+    print(rowSize, columnSize, r+1)
+    y = [result.iloc[1,r] for result in resultDescriptions]
+    plt.subplot(rowSize, columnSize, r+1)
+    plt.plot(labelMixPer, y, "g-")
+    plt.title(str(yNames[r]) + " vs Percent Label Mixup (2000 instances)", fontsize=12)
+    plt.ylabel(str(yNames[r]), fontsize=14, rotation=90)
+    plt.xlabel("Perc of labels mixed up", fontsize=14)
+    
+save_fig('LabelMixup2000')   
 plt.show()
