@@ -177,7 +177,6 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
         data = []
         for r in args["train_ratio"]:
             percent=float(r)/100
-            #stratified shuffle split used for cross validation
             sss = StratifiedShuffleSplit(n_splits=1, random_state=0, test_size=1-percent)
             cm = np.zeros([2,2], dtype=np.int64)
             train_time = 0.0
@@ -193,7 +192,7 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 global labelTrainSize 
                 labelTrainSize = len(labels_train)
                 print(labelTrainSize, len(labels_test))
-                mixLabels(labels_train, args["mix_size"], 42)
+                mixLabelsByFeat(labels_train, args["mix_size"], 42, comb_inputs)
 
                 if m == "oneLayer_comb":
                     print('oneLayer_comb')
@@ -469,6 +468,52 @@ def mixLabels(y_train, perc, seed):
     for i in np.arange(mixSize):
         y_train[mixIndices[i]] = 0 if y_train[i] else 1
 
+def importantVocabCount(row):
+    sum = 0
+    for i in X_cutoff:
+        sum += row[i]
+    return sum
+
+def mixLabelsByFeat(y_train, perc, seed, vocab_arr):
+    '''
+    Mixes labels based on vocabulary counts
+    '''
+    #Convert sparse vocab count matrix to array, and find most frequently occuring feats/perms
+    X_sum = np.sum(vocab_arr, axis=0)
+    X_sum_sorted = np.argsort(X_sum)
+
+    #50th most occuring word
+    cutoff = X_sum_sorted[len(X_sum)-49:len(X_sum)-50:-1][0] 
+
+    #Array with each instances word count for most frequent feats/perms
+    X_wc = np.apply_along_axis(importantVocabCount, axis=1, arr=vocab_arr)
+    #Array with indices of the instances with the highest word count for the most frequent feats/perms
+    X_wc_i = np.argsort(X_wc.ravel())
+
+    mixSize = int(len(y_train) * perc)
+    mixIndices = X_wc_i[len(X_wc_i), len(X_wc_i) - mixSize: -1]
+
+    print("Labelsize and number of labels changed: ", y_train.shape[0], mixSize)
+
+    for i in np.arange(mixSize):
+        y_train[mixIndices[i]] = 0 if y_train[i] else 1
+
+
+def mixLabelsByWeight(y_train, perc, seed, weights):
+    '''Mixes labels based on instances that seem important.  This is determined by the absolute value of the input's weights summed up
+    
+    Parameters
+    ----------
+    y_train : [type]
+        [description]
+    perc : [type]
+        [description]
+    seed : [type]
+        [description]
+    weights : [type]
+        [description]
+    
+    '''
 
 def parse_arguments():
     parser = argparse.ArgumentParser()

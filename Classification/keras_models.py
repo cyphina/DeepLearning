@@ -79,7 +79,7 @@ def create_dualInputSimple(input_ratio, feat_width, perm_width, neurons=32, drop
     model.compile(loss='binary_crossentropy', optimizer='nadam', metrics=['accuracy'])
     return model
 
-def create_dualInputLarge(input_ratio, feat_width, perm_width, neurons=32, dropout_rate=0.1):
+def create_dualInputLarge(input_ratio, feat_width, perm_width, neurons=32, dropout_rate=0.1, weights=None):
     '''this model performs additional analysis with layers after concatenation'''
     perm_width=int(perm_width)
     perm_input = Input(shape=(perm_width,), name='permissions_input')
