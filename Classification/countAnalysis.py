@@ -7,8 +7,8 @@ from nltk.tokenize.regexp import regexp_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
 
 #%%
-GOOD_PATH = r"D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt"
-BAD_PATH = r"D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"
+GOOD_PATH = r"C:\Users\Ari\Documents\Android DL Research\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt"
+BAD_PATH = r"C:\Users\Ari\Documents\Android DL Research\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"
 
 with open(GOOD_PATH, encoding='utf-8') as f:
     ben_samples = f.readlines()
@@ -45,13 +45,13 @@ X_cutoff = X_sum_sorted[len(X_sum_sorted):len(X_sum_sorted)-50:-1]
 X_cutoff
 
 #%%
-def importantVocabCount(row):
+def importantVocabCount(row, X_cutoff):
     sum = 0
     for i in X_cutoff:
         sum += row[i]
     return sum
 
-X_importantWordCount = np.apply_along_axis(importantVocabCount, axis=1, arr=X_arr)
+X_importantWordCount = np.apply_along_axis(importantVocabCount, axis=1, arr=X_arr, X_cutoff=X_cutoff)
 X_importantWordCount
 
 #%%
@@ -62,6 +62,10 @@ X_importantWordCountSorted.shape
 X_importantWordCountSorted[::-1]
 
 #%%
+X_importantWordCount[X_importantWordCountSorted[::-1]]
+
+#%%
 X_importantWordCountSorted[2000:1988:-1]
 
+#%%
 
