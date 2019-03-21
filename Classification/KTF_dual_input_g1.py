@@ -192,7 +192,7 @@ def final_test(args, perm_inputs, feat_inputs, comb_inputs, labels):
                 global labelTrainSize 
                 labelTrainSize = len(labels_train)
                 print(labelTrainSize, len(labels_test))
-                mixLabelsByFeat(labels_train, args["mix_size"], 42, comb_inputs)
+                #mixLabelsByFeat(labels_train, args["mix_size"], 42, comb_inputs)
 
                 if m == "oneLayer_comb":
                     print('oneLayer_comb')

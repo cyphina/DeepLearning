@@ -7,8 +7,8 @@ from nltk.tokenize.regexp import regexp_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
 
 #%%
-GOOD_PATH = r"C:\Users\Ari\Documents\Android DL Research\DeepLearning-add-3-models\Data\subsets\benign_badging_1000h.txt"
-BAD_PATH = r"C:\Users\Ari\Documents\Android DL Research\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"
+GOOD_PATH = r"D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\benign_badging_1000h.txt"
+BAD_PATH = r"D:\Documents\Programming\ML\DeepLearning-add-3-models\Data\subsets\mal_badging_1000h.txt"
 
 with open(GOOD_PATH, encoding='utf-8') as f:
     ben_samples = f.readlines()
