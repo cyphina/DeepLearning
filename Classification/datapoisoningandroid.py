@@ -23,7 +23,7 @@ from sklearn.metrics import confusion_matrix
 
 !pip install tensorflow-gpu==2.0.0-alpha0
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Dropout, Input, concatenate
+from tensorflow.keras.layers import Input, Dense, Dropout, concatenate
 from tensorflow.keras.callbacks import LambdaCallback
 from tensorflow.keras import Model
 
@@ -38,13 +38,17 @@ DATA_PATH = os.path.join(PROJECT_PATH, r"Data/subsets/")
 GOOD_PATH = os.path.join(DATA_PATH, r"benign_badging_{}000h.txt")
 BAD_PATH = os.path.join(DATA_PATH, r"mal_badging_{}000h.txt")
 RESULT_PATH = os.path.join(PROJECT_PATH, "Results")
+CHKPT_PATH = os.path.join(PROJECT_PATH, "Checkpoints")
 #Data params
 RANDOM_SEED = 42
 SUBSET_COUNT = 4
 TRAIN_RATIO = .8
 class EMixStrategy(Enum):
+  NoStrategy = 0
   Random = 1
   Most_Occuring=2
+  Gradients=3
+  Weights=4
 #Model params
 NEURONS_PER_LAYER = 32
 DROPOUT_RATE = .1
@@ -55,6 +59,7 @@ EPOCHS=32
 if not os.path.exists(RESULT_PATH):
   os.makedirs(RESULT_PATH)
 
+#Load files with permissions from disk
 ben_samples = []
 mal_samples = []
 
@@ -67,23 +72,27 @@ for x in range(SUBSET_COUNT):
 samples = ben_samples + mal_samples
 len(samples)
 
+#Add labels
 labels = np.array([])
 for x in ben_samples:
   labels = np.append(labels, 0)
 for x in mal_samples:
   labels = np.append(labels, 1)
 
+#Test out sample size
 sampleSize = len(labels)
 sampleSize
 
 """Data Preprocessing"""
 
+#Regex expressions formatching 
 perm_pattern = "(?:\w|\.)+(?:permission).(?:\w|\.)+"
 feat_pattern = "(?:\w|\.)+(?:hardware).(?:\w|\.)+"
 comb_pattern = "(?:\w|\.)+(?:hardware|permission).(?:\w|\.)+"
 
 """Generate a matrix where the columns are the permissions and features, the rows are the instances, and the values are 1 if the permission/feature is present or not"""
 
+#Wordcount one-hot transformer
 perm_vect = CountVectorizer(analyzer=partial(regexp_tokenize, pattern=perm_pattern))
 feat_vect = CountVectorizer(analyzer=partial(regexp_tokenize, pattern=feat_pattern))
 comb_vect = CountVectorizer(analyzer=partial(regexp_tokenize, pattern=comb_pattern))
@@ -95,18 +104,22 @@ comb_vect = CountVectorizer(analyzer=partial(regexp_tokenize, pattern=comb_patte
 
 """Preload the generated vocab over the full dataset so we don't have to call fit on the CountVectorizer"""
 
+#Load pregenerated vocabulary from file 
 perm_vocab = json.load(open(os.path.join(PROJECT_PATH,'perm_vocab.json')))
 feat_vocab = json.load(open(os.path.join(PROJECT_PATH,'feat_vocab.json')))
 comb_vocab = json.load(open(os.path.join(PROJECT_PATH,'comb_vocab.json')))
 
+#Set vocabulry before transformation
 perm_vect.vocabulary_ = perm_vocab
 feat_vect.vocabulary_ = feat_vocab
 comb_vect.vocabulary_ = comb_vocab
 
+#Generate the one-hot vectors now 
 perm_input_sparse = perm_vect.transform(samples)
 feat_input_sparse = feat_vect.transform(samples)
 comb_input_sparse = comb_vect.transform(samples)
 
+#To numpy array for easier use
 perm_inputs = perm_input_sparse.toarray()
 feat_inputs = feat_input_sparse.toarray()
 comb_inputs = comb_input_sparse.toarray()
@@ -132,6 +145,7 @@ labels_train
 
 """Model Creation"""
 
+#Model creation
 def createModel():
   perm_input_layer = Input(shape=(perm_vocab_width,), name='permissions_input')
   h1_perm = Dense(NEURONS_PER_LAYER, activation='relu')(perm_input_layer)
@@ -146,11 +160,50 @@ def createModel():
   h3_comb = Dense(int((NEURONS_PER_LAYER+(NEURONS_PER_LAYER*INPUT_RATIO))/2), activation='relu')(h2_comb)
   output = Dense(1, activation='sigmoid', name="output")(h3_comb)
   model = Model(inputs=[perm_input_layer, feat_input_layer], outputs=output)
-  model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
   return model
 
 """Helper Functions"""
 
+#Test but keep track of gradients
+#Theory: We want to keep track of how much each feature contributes to the final model
+#One proposed way is to average the gradients of the trained model for each input
+
+loss_object = tf.keras.losses.BinaryCrossentropy()
+optimizer = tf.compat.v1.train.AdamOptimizer()
+
+@tf.function
+def computeGrads(perms, feats, labels):
+  with tf.GradientTape() as tape:
+    predictions = model([perms, feats])
+    loss = loss_object(labels, predictions)
+
+  gradients = tape.gradient(loss, model.trainable_variables)
+  input_gradient = gradients[0]
+  return input_gradient
+
+train_accuracy = tf.keras.metrics.BinaryAccuracy(name='train_accuracy')
+train_loss = tf.keras.metrics.Mean(name='train_loss')
+
+@tf.function
+def train_step(perms, feats, labels):
+  with tf.GradientTape() as tape:
+    predictions = model([perms, feats])
+    loss = loss_object(labels, predictions)
+
+  gradients = tape.gradient(loss, model.trainable_variables)
+  optimizer.apply_gradients(zip(gradients,model.trainable_variables))
+   
+  train_loss(loss)
+  train_accuracy(labels, predictions)
+
+test_accuracy = tf.keras.metrics.BinaryAccuracy(name='test_accuracy')
+
+@tf.function
+def test_step(perms, feats, labels):
+  predictions = model([perms, feats])
+  accuracy = test_accuracy(labels, predictions)
+
+#Metric functions
 def calc_accuracy(cm):
     TP = float(cm[1][1])
     TN = float(cm[0][0])
@@ -188,6 +241,7 @@ def save_results(data,mixStrategy):
   with open(modelPath, "a+") as f:
       df.to_csv(f, mode='a', header=isNewFile, index=False)
 
+#Data poisoning label mixing formulas
 def mixLabels(y_train, perc, seed):
     '''
     Pick random labels and switch their values
@@ -233,14 +287,80 @@ def mixLabelsByFeat(y_train, perc, seed, vocab_arr=comb_train):
     for i in np.arange(mixSize):
         y_train[mixIndices[i]] = 0 if y_train[mixIndices[i]] else 1
 
-def Test(mixP=0.0, mixStrategy=EMixStrategy.Random):
+def mixLabelsByGradients(y_train, perc, seed):
+  #Train using low level api so we don't have a preset batch size
+  #Create a new model
+  model=createModel()
+
+  #Use tensorflow datasets to pass in information to tf.function
+  dataset_train = tf.data.Dataset.from_tensor_slices(
+    (
+      perm_train,
+      feat_train,
+      np.array(labels_train).reshape(-1,1)
+    )
+  )
+
+  dataset_test = tf.data.Dataset.from_tensor_slices(
+    (
+      perm_test,
+      feat_test,
+      np.array(labels_test).reshape(-1,1)
+    )
+  )
+
+  dataset_grads = dataset_train.batch(1) #Feed in one input at a time to find its gradients but don't update weights
+  dataset_batch = dataset_train.batch(32) #Train the model as normally first
+  dataset_test_batch = dataset_test.batch(32) #Test set to ensure we did not screw up the model
+  
+  #Training and testing with tf.function
+  template = 'Epoch {}, Loss: {}, Accuracy: {}'
+  for epoch in range(2):
+    for perm, feat, y in dataset_batch:
+      train_step(perm,feat,y)
+    print(template.format(epoch+1, train_loss.result(), train_accuracy.result() * 100))
+
+  template = 'Accuracy {}'
+  for perm, feat, y in dataset_test_batch:
+      test_step(perm, feat, y)
+  print(template.format(test_accuracy.result() * 100))
+  
+  #Feed one input at a time and compute gradients but do not update the model
+  input_grads = []
+  for perm, feat, y in dataset_grads:
+    input_grad = np.sum(np.absolute(computeGrads(perm, feat, y)), axis=1)
+    input_grads.append(input_grad)  
+  
+  #Normalize scores (optional) and arrange indices by score
+  inputGrads = np.array(input_grads)
+  inputGradsZ = (inputGrads - inputGrads.mean()) / inputGrads.std()
+  inputsSortedByGrad = np.sort(np.sum(inputGradsZ, axis = 1))
+  inputsIndicesSortedByGrad = np.argsort(np.sum(inputGradsZ, axis = 1))
+  
+  print('InputDifference:',inputsIndicesSortedByGrad[0]-inputsIndicesSortedByGrad[1000])
+  
+  #Get size of mixed labels
+  mixSize = int(len(y_train) * perc)
+  
+  #Switch labels
+  for i in range(mixSize):
+    y_train[inputsIndicesSortedByGrad[-i]] = 0 if y_train[inputsIndicesSortedByGrad[-i]] else 1  
+    
+def mixLabelsByWeights(y_train, perc, seed):
+  model=createModel()
+
+#Train and test the model
+def Test(mixP=0.0, mixStrategy=EMixStrategy.NoStrategy):
   labels_train_copy = labels_train.copy()
   
   if mixStrategy is EMixStrategy.Random:
     mixLabels(labels_train_copy, mixP, RANDOM_SEED)
   elif mixStrategy is EMixStrategy.Most_Occuring:
     mixLabelsByFeat(labels_train_copy, mixP, RANDOM_SEED)
-  
+  elif mixStrategy is EMixStrategy.Gradients:
+    mixLabelsByGradients(labels_train_copy, mixP, RANDOM_SEED)
+    
+  model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
   startTrain = timeit.default_timer()
   model.fit([perm_train, feat_train], labels_train_copy, epochs=EPOCHS, batch_size=BATCH_SIZE)
   endTrain = timeit.default_timer()
@@ -252,7 +372,8 @@ def Test(mixP=0.0, mixStrategy=EMixStrategy.Random):
   labels_pred = (labels_pred > 0.5)
   cm = confusion_matrix(labels_test, labels_pred)
   return (cm, trainTime, testTime, mixP, mixStrategy)
-  
+
+#Print out metrics
 def calcMetrics(resTuple):
   cm = resTuple[0]
   acc = calc_accuracy(cm)
@@ -268,12 +389,14 @@ def calcMetrics(resTuple):
                         ["Dual_Large", NEURONS_PER_LAYER, TRAIN_RATIO, INPUT_RATIO, EPOCHS, BATCH_SIZE, acc, prec, rec, f1, resTuple[1], resTuple[2], resTuple[3], resTuple[3] * sampleSize])))
   save_results(data, resTuple[4])
 
+#Test different label mixing ratios
 mixPercentages = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 model = createModel() 
 initial_weights = model.get_weights() 
 
+#Run test and reset weights afterwards
 for x in mixPercentages: 
-  resTuple = Test(x, EMixStrategy.Most_Occuring) 
+  resTuple = Test(x, EMixStrategy.Gradients) 
   calcMetrics(resTuple) 
   model.set_weights(initial_weights)
 
@@ -281,13 +404,5 @@ for x in mixPercentages:
 
 model = createModel() 
 print_weights = LambdaCallback(on_batch_end= lambda batch, logs: print(model.lay))
-model.fit([perm_train, feat_train], labels_train_copy, epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=)
+model.fit([perm_train, feat_train], labels_train_copy, epochs=EPOCHS, batch_size=BATCH_SIZE)
 calcMetrics(resTuple)
-
-model.summary()
-
-layer = model.get_layer('permissions_input')
-len(layer.weights) #returns two lists containing weights and bias
-
-layer.trainable_weights
-

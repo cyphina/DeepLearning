@@ -2,8 +2,10 @@
 #%%
 #Import right modules and open the right files
 import os
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
+from enum import Enum
 
 def save_fig(figName, tightLayout = True):
     savePath = os.path.join(os.getcwd(), figName + ".png")
@@ -12,41 +14,55 @@ def save_fig(figName, tightLayout = True):
         plt.tight_layout()
     plt.savefig(savePath, format='png', dpi=300)
 
+#Set the right cwd manually
+
+class EMixStrategy(Enum):
+  NoStrategy = 0
+  Random = 1
+  Most_Occuring=2
+  Gradients=3
+  Weights=4
+
+cwdFolderName = os.path.split(os.getcwd())[-1]
 #Load up the dataframes depending if we run it in the folder where this program is, or in the root project folder
-if os.path.split(os.getcwd())[-1] == "Classification":
-    saveResPath = os.path.join(os.getcwd().replace("Classification", ""), "Results", "NamLabelMixups", "3212019")
+if cwdFolderName == "Classification" or cwdFolderName == "ResultAnalyzer":
+    saveResPath = os.path.join(os.getcwd().replace(cwdFolderName, ""), "Results", "NamLabelMixups")
 else:
-    saveResPath = os.path.join(os.getcwd(), "Results", "NamLabelMixups","3212019")
+    saveResPath = os.path.join(os.getcwd(), "Results", "NamLabelMixups")
 
 fileNames = os.listdir(saveResPath)
 
+files = []
 randomFiles = [] #Using random pick
 occuringFiles = [] #Picking based on occurances of most popular features
+gradientFiles = []
 
-for fileName in fileNames:
-    if fileName.endswith("Random.csv"):
-        randomFiles.append(fileName)
-    elif fileName.endswith("Most_Occuring.csv"):
-        occuringFiles.append(fileName)
+for strategyFileName in fileNames:
+    for fileName in os.listdir(os.path.join(saveResPath, strategyFileName)): 
+        if fileName.endswith(str(EMixStrategy.Random) + ".csv"):
+            files[EMixStrategy.Random].append(fileName)
+        elif fileName.endswith(str(EMixStrategy.Most_Occuring) + ".csv"):
+            files[EMixStrategy.Most_Occuring].append(fileName)
+        elif fileName.endswith(str(EMixStrategy.Gradients) + ".csv"):
+            files[EMixStrategy.Gradients].append(str(fileName))        
 
-randomFiles, occuringFiles
+randomFiles, occuringFiles, gradientFiles
 
 #%%
-resultDescriptionsRand, resultDescriptionsOccuring = [],[]
-labelMixPerRand, labelMixPerOccur = [],[]
+res = []
+resLabels = []
+
+def getResults(files, ):
+    for file in files:
+        result = pd.read_csv(os.path.join(saveResPath, file))
+        desc = result.describe()
+        res.append(desc)
+        mixPer.append(result.iloc[0,6])
 
 #Get the mean values for each column in the table of trials
-for file in randomFiles:
-    result = pd.read_csv(os.path.join(saveResPath, file))
-    desc = result.describe()
-    resultDescriptionsRand.append(desc)
-    labelMixPerRand.append(result.iloc[0,6])
-
-for file in occuringFiles:
-    result = pd.read_csv(os.path.join(saveResPath, file))
-    desc = result.describe()
-    resultDescriptionsOccuring.append(desc)
-    labelMixPerOccur.append(result.iloc[0,6])
+getResults(randomFiles, resultDescriptionsRand, labelMixPerRand)
+getResults(randomFiles, resultDescriptionsRand, labelMixPerRand)
+getResults(randomFiles, resultDescriptionsRand, labelMixPerRand)
 
 #%%
 #Plot the accuracy
