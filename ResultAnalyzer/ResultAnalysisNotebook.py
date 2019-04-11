@@ -45,7 +45,9 @@ for strategyFileName in [os.path.join(saveResPath, str(strategy)) for strategy i
             elif fileName.endswith(str(EMixStrategy.Most_Occuring) + ".csv"):
                 files[EMixStrategy.Most_Occuring].append(fileName)
             elif fileName.endswith(str(EMixStrategy.Gradients) + ".csv"):
-                files[EMixStrategy.Gradients].append(str(fileName))        
+                files[EMixStrategy.Gradients].append(str(fileName))
+            elif fileName.endswith(str(EMixStrategy.Weights) + ".csv"):
+                files[EMixStrategy.Weights].append(str(fileName))   
 
 print(files)
 
@@ -93,7 +95,7 @@ for r in range(totalGraphs):
             #Row 1 is the mean in case we have multiple values recorded for each mix percentage trial
             y[i] = [result.iloc[1,r] for result in res[i]] 
             plt.subplot(rowSize, columnSize, r+1)
-            plt.plot(resLabels[i], y[i], "g-", label=EMixStrategy(i))
+            plt.plot(resLabels[i], y[i], "g-", label=EMixStrategy(i), color = 'C' + str(i))
 
     plt.title(str(yNames[r]) + " vs Percent Label Mixup (8000 instances)", fontsize=12)
     plt.ylabel(str(yNames[r]), fontsize=14, rotation=90)
