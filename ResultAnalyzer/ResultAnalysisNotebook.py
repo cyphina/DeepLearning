@@ -23,6 +23,8 @@ class EMixStrategy(IntEnum):
   Most_Occuring=2
   Gradients=3
   Weights=4
+  Furthest_Bounds = 5
+  Furthest_Bounds_SVM = 6
 
 cwdFolderName = os.path.split(os.getcwd())[-1]
 #Load up the dataframes depending if we run it in the folder where this program is, or in the root project folder
@@ -47,7 +49,11 @@ for strategyFileName in [os.path.join(saveResPath, str(strategy)) for strategy i
             elif fileName.endswith(str(EMixStrategy.Gradients) + ".csv"):
                 files[EMixStrategy.Gradients].append(str(fileName))
             elif fileName.endswith(str(EMixStrategy.Weights) + ".csv"):
-                files[EMixStrategy.Weights].append(str(fileName))   
+                files[EMixStrategy.Weights].append(str(fileName))  
+            elif fileName.endswith(str(EMixStrategy.Furthest_Bounds) + ".csv"):
+                files[EMixStrategy.Furthest_Bounds].append(str(fileName))
+            elif fileName.endswith(str(EMixStrategy.Furthest_Bounds_SVM) + ".csv"):
+                files[EMixStrategy.Furthest_Bounds_SVM].append(str(fileName))
 
 print(files)
 
@@ -74,6 +80,7 @@ for i, file in enumerate(files.values()):
         getResults(EMixStrategy(i))
 
 #%%
+# i is strategy, j is percentage (0-100% with 10% increments)
 res[1][0]
 
 #%%
